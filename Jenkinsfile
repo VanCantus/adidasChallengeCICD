@@ -16,7 +16,7 @@ pipeline {
         stage ('Build') {
             steps {
                 script {
-                    sh './gradlew build && java -jar build/libs/challenge-0.0.1.jar'
+                    sh './gradlew build'
                 }
             }
         }
