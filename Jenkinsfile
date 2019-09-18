@@ -1,12 +1,14 @@
 pipeline {
-    // Define variables for use in the different stages of the Jenkins pipeline
-    def ms_name = 'adidas-challenge'
-    def repo = 'vancantus'
-    def ms_image_tag = "${repo}/${ms_name}:v${env.BUILD_NUMBER}"
-    def ms_dockerfile_name = 'Dockerfile-ms'
-    def ms_container_name = 'ms-adidas-challenge'
-
     agent any
+
+    // Define variables for use in the different stages of the Jenkins pipeline
+    environment {
+        MS_NAME = 'adidas-challenge'
+        REPO = 'vancantus'
+        MS_IMAGE_TAG = "${REPO}/${MS_NAME}:v${env.BUILD_NUMBER}"
+        MS_DOCKERFILE_NAME = 'Dockerfile-ms'
+        MS_CONTAINER_NAME = 'ms-adidas-challenge'
+    }
 
     triggers {
     //    cron('H */12 * * *') // build every half a day
@@ -40,7 +42,7 @@ pipeline {
 
         stage ('Build Docker Image') {
             container ('docker') {
-                sh "docker build -f ${ms_dockerfile_name} -t ${ms_image_tag} ."
+                sh "docker build -f ${MS_DOCKERFILE_NAME} -t ${MS_IMAGE_TAG} ."
             }
 
             /*container ('helm') {
