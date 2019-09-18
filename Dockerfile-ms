@@ -1,0 +1,19 @@
+# Get OpenJDK image
+FROM openjdk:8-alpine
+
+# Create a directory to put the jar file to
+RUN mkdir -p /opt/adidasChallenge
+
+# Assign it as the working directory
+WORKDIR /opt/adidasChallenge
+
+# Copy the jar file to the directory
+COPY build/libs/challenge-0.0.1.jar /opt/adidasChallenge
+
+# Expose port 8082
+EXPOSE 8082
+
+# Execute the jar file
+ENV JAVA_ARGS=""
+#CMD ["java", "$JAVA_ARGS", "-jar", "challenge-0.0.1.jar"]
+CMD java $JAVA_ARGS -jar challenge-0.0.1.jar
