@@ -1,39 +1,42 @@
-pipeline {
-    agent any
+podTemplate(label: 'k8s', containers: [
+  containerTemplate(name: 'gradle', image: 'gradle:jdk12', command: 'cat', ttyEnabled: true),
+  containerTemplate(name: 'docker', image: 'docker', command: 'cat', ttyEnabled: true),
+  containerTemplate(name: 'kubectl', image: 'lachlanevenson/k8s-kubectl:v1.8.8', command: 'cat', ttyEnabled: true),
+  containerTemplate(name: 'helm', image: 'lachlanevenson/k8s-helm:latest', command: 'cat', ttyEnabled: true)
+],
+volumes: [
+  hostPathVolume(mountPath: '/home/gradle/.gradle', hostPath: '/tmp/jenkins/.gradle'),
+  hostPathVolume(mountPath: '/var/run/docker.sock', hostPath: '/var/run/docker.sock')
+]) {
+    node ('k8s') {
+        // Define variables for use in the different stages of the Jenkins pipeline
+        def ms_name = 'adidas-challenge'
+        def repo = 'vancantus'
+        def ms_image_tag = "${repo}/${ms_name}:v${env.BUILD_NUMBER}"
+        def ms_dockerfile_name = 'Dockerfile-ms'
+        def ms_container_name = 'ms-adidas-challenge'
 
-    // Define variables for use in the different stages of the Jenkins pipeline
-    environment {
-        MS_NAME = 'adidas-challenge'
-        REPO = 'vancantus'
-        MS_IMAGE_TAG = "${REPO}/${MS_NAME}:v${env.BUILD_NUMBER}"
-        MS_DOCKERFILE_NAME = 'Dockerfile-ms'
-        MS_CONTAINER_NAME = 'ms-adidas-challenge'
-    }
-
-    triggers {
-    //    cron('H */12 * * *') // build every half a day
-        pollSCM('*/5 * * * *') // polling for changes every 5 minutes
-    }
-
-    stages {
+        echo 'test'
         stage ('Checkout from GitHub') {
-            steps {
-                git branch: 'master', url: "https://github.com/paulvassu/adidasChallenge.git"
-            }
+            echo 'Checkout from GitHub'
+            git(
+                url: 'https://github.com/paulvassu/adidasChallenge',
+                branch: 'master'
+            )
         }
 
         stage ('Build Microservice') {
-            steps {
-                script {
-                    sh './gradlew build'
-                }
+            echo 'Build Microservice'
+            script {
+                sh './gradlew build'
             }
         }
 
         stage ('Unit Tests') {
-            steps {
+            container ('gradle') {
+                echo 'Unit Tests'
                 script {
-                    sh './gradlew test'
+                    sh 'gradle test'
                 }
             }
         }
@@ -42,12 +45,16 @@ pipeline {
 
         stage ('Build Docker Image') {
             container ('docker') {
-                sh "docker build -f ${MS_DOCKERFILE_NAME} -t ${MS_IMAGE_TAG} ."
+                echo 'Build Docker Image'
+                dockerImage = docker.build("${ms_image_tag}", "${ms_dockerfile_name}")
             }
+        }
 
-            /*container ('helm') {
-                sh 'helm upgrade --install --force '
-            }*/
+        stage ('Deploy to Kubernetes') {
+            container ('kubectl') {
+                echo 'Deploy to Kubernetes'
+                sh ("kubectl set image deployment/${K8S_DEPLOYMENT_NAME} ${K8S_DEPLOYMENT_NAME}=${DOCKER_HUB_ACCOUNT}/${DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}")
+            }
         }
     }
 }
